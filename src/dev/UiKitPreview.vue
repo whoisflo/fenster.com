@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
+import BaseAlert from '@/components/base/BaseAlert.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseIcon from '@/components/base/BaseIcon.vue'
 import BaseIconButton from '@/components/base/BaseIconButton.vue'
+import BasePanel from '@/components/base/BasePanel.vue'
+import BaseQuantityStepper from '@/components/base/BaseQuantityStepper.vue'
+import BaseTextField from '@/components/base/BaseTextField.vue'
 import type { IconName } from '@/components/base/icons'
 
 const iconNames: IconName[] = ['plus', 'minus', 'close', 'spinner']
+
+const quantity = ref(3)
+const city = ref('')
+const address = ref('')
+const postalCode = ref('1')
 </script>
 
 <template>
@@ -52,6 +63,59 @@ const iconNames: IconName[] = ['plus', 'minus', 'close', 'spinner']
           {{ name }}
         </li>
       </ul>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="font-heading text-xl font-bold text-navy">BaseQuantityStepper</h2>
+      <div class="flex items-center gap-6">
+        <BaseQuantityStepper v-model="quantity" label="Wool Beanie" />
+        <p class="text-sm text-navy">
+          Committed quantity: <strong>{{ quantity }}</strong> (try typing 0, 150 or abc)
+        </p>
+      </div>
+    </section>
+
+    <section class="space-y-6">
+      <h2 class="font-heading text-xl font-bold text-navy">BaseAlert</h2>
+      <BaseAlert title="Your cart is empty.">Use Add Item to add a product.</BaseAlert>
+      <BaseAlert tone="error" title="We couldn't load your products.">
+        <template #actions>
+          <BaseButton variant="secondary">Try again</BaseButton>
+        </template>
+      </BaseAlert>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="font-heading text-xl font-bold text-navy">BasePanel + BaseTextField</h2>
+      <div class="max-w-sm">
+        <BasePanel title="Calculate Shipping">
+          <div class="space-y-6">
+            <BaseTextField
+              v-model="city"
+              label="City"
+              hide-label
+              placeholder="Stuttgart"
+              autocomplete="address-level2"
+            />
+            <BaseTextField
+              v-model="address"
+              label="Address"
+              hide-label
+              placeholder="Street and house number"
+              autocomplete="address-line1"
+            />
+            <BaseTextField
+              v-model="postalCode"
+              label="Postal code"
+              hide-label
+              placeholder="12345"
+              autocomplete="postal-code"
+              error="Enter a valid postal code"
+            />
+            <BaseButton variant="accent">Calculate Shipping</BaseButton>
+          </div>
+        </BasePanel>
+      </div>
     </section>
   </div>
 </template>
