@@ -1,13 +1,24 @@
 @import 'tailwindcss';
 
+/* Design tokens sampled from the Figma mockup (docs/design/cart-mockup.png). */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: oklch(0.97 0.02 250);
-  --color-brand-500: oklch(0.62 0.17 255);
-  --color-brand-600: oklch(0.55 0.17 255);
-  --color-brand-700: oklch(0.48 0.16 255);
+  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Josefin Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy: #1d3178;
+  --color-green: #19d16f;
+  --color-pink: #fb2e86;
+  --color-panel: #f4f4fc;
+  --color-muted: #a1a8c1;
+  --color-line: #e1e1e4;
+  --color-panel-line: #e8e6f1;
+  --color-field-line: #7e9bfc;
+  --color-control: #f0eff2;
+  --color-placeholder: #c4c4c4;
 }
 
-html {
-  scroll-behavior: smooth;
+@layer base {
+  body {
+    @apply bg-white text-neutral-900 antialiased;
+  }
 }
