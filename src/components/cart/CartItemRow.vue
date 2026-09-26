@@ -8,6 +8,7 @@ import { cartGrid } from "@/components/cart/cartGrid";
 import { MAX_QUANTITY, MIN_QUANTITY } from "@/config";
 import { formatMoney } from "@/lib/money";
 import { lineTotal } from "@/lib/pricing";
+import { pluralize } from "@/lib/text";
 import type { CartItem } from "@/types/cart";
 
 const { item } = defineProps<{ item: CartItem }>();
@@ -20,13 +21,13 @@ const emit = defineEmits<{
 const ratingText = computed(() => {
   if (!item.rating) return null;
   const { rate, count } = item.rating;
-  return `${rate.toFixed(1)} (${count} ${count === 1 ? "review" : "reviews"})`;
+  return `${rate.toFixed(1)} (${pluralize(count, "review")})`;
 });
 </script>
 
 <template>
   <li
-    class="flex flex-col gap-4 border-b border-line py-5 sm:items-center"
+    class="flex flex-col gap-4 border-b border-line py-5 md:items-center"
     :class="cartGrid"
   >
     <div class="flex items-start gap-4">
@@ -52,13 +53,13 @@ const ratingText = computed(() => {
       </div>
     </div>
 
-    <div class="flex items-end justify-between gap-3 sm:contents">
+    <div class="flex items-end justify-between gap-3 md:contents">
       <div class="text-sm text-navy tabular-nums">
-        <span class="block text-xs text-muted sm:sr-only">Price</span>
+        <span class="block text-xs text-muted md:sr-only">Price</span>
         {{ formatMoney(item.unitPriceCents) }}
       </div>
       <div>
-        <span class="block text-center text-xs text-muted sm:sr-only"
+        <span class="block text-center text-xs text-muted md:sr-only"
           >Quantity</span
         >
         <BaseQuantityStepper
@@ -70,7 +71,7 @@ const ratingText = computed(() => {
         />
       </div>
       <div class="text-right text-sm text-navy tabular-nums">
-        <span class="block text-xs text-muted sm:sr-only">Total</span>
+        <span class="block text-xs text-muted md:sr-only">Total</span>
         {{ formatMoney(lineTotal(item)) }}
       </div>
     </div>

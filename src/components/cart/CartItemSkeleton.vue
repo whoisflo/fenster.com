@@ -5,7 +5,7 @@ import { cartGrid } from "@/components/cart/cartGrid";
 <template>
   <li
     aria-hidden="true"
-    class="flex animate-pulse flex-col gap-4 border-b border-line py-5 sm:items-center"
+    class="flex animate-pulse flex-col gap-4 border-b border-line py-5 md:items-center"
     :class="cartGrid"
   >
     <div class="flex items-start gap-4">
@@ -16,11 +16,11 @@ import { cartGrid } from "@/components/cart/cartGrid";
         <div class="h-3 w-1/4 rounded-xs bg-placeholder/40" />
       </div>
     </div>
-    <div class="flex items-center justify-between gap-3 sm:contents">
+    <div class="flex items-center justify-between gap-3 md:contents">
       <div class="h-3.5 w-14 rounded-xs bg-placeholder/60" />
       <div class="h-8 w-28 rounded-xs bg-placeholder/40" />
       <div
-        class="h-3.5 w-16 rounded-xs bg-placeholder/60 sm:justify-self-end"
+        class="h-3.5 w-16 rounded-xs bg-placeholder/60 md:justify-self-end"
       />
     </div>
   </li>
