@@ -1,11 +1,16 @@
 import {
+  SHIPPING_MAX_DOLLARS,
+  SHIPPING_MIN_DOLLARS,
+  SHIPPING_QUOTE_DELAY_MS,
+} from "@/config";
+import {
   lengthBetween,
   matches,
   required,
   validateFields,
   type Schema,
 } from "@/lib/validation";
-import type { ShippingDestination } from "@/types/cart";
+import type { ShippingDestination, ShippingQuote } from "@/types/cart";
 
 export const shippingFormSchema: Schema<keyof ShippingDestination> = {
   city: [
@@ -29,4 +34,20 @@ export const shippingFormSchema: Schema<keyof ShippingDestination> = {
 
 export function validateShippingForm(values: ShippingDestination) {
   return validateFields(values, shippingFormSchema);
+}
+
+export function quoteShipping(
+  destination: ShippingDestination,
+  random: () => number = Math.random,
+  delayMs = SHIPPING_QUOTE_DELAY_MS,
+): Promise<ShippingQuote> {
+  const range = SHIPPING_MAX_DOLLARS - SHIPPING_MIN_DOLLARS + 1;
+  const dollars = SHIPPING_MIN_DOLLARS + Math.floor(random() * range);
+
+  return new Promise((resolve) => {
+    setTimeout(
+      () => resolve({ destination, costCents: dollars * 100 }),
+      delayMs,
+    );
+  });
 }

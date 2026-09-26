@@ -1,12 +1,56 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { validateShippingForm } from "@/lib/shipping";
+import { quoteShipping, validateShippingForm } from "@/lib/shipping";
 
 const valid = {
   city: "Stuttgart",
   address: "Königstraße 1",
   postalCode: "70173",
 };
+
+describe("quoteShipping", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("quotes $5 at the low end of the range", async () => {
+    vi.useFakeTimers();
+    const quote = quoteShipping(valid, () => 0);
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    await expect(quote).resolves.toEqual({
+      destination: valid,
+      costCents: 500,
+    });
+  });
+
+  it("quotes $25 at the high end of the range", async () => {
+    vi.useFakeTimers();
+    const quote = quoteShipping(valid, () => 0.9999);
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    await expect(quote).resolves.toEqual({
+      destination: valid,
+      costCents: 2500,
+    });
+  });
+
+  it("answers only after the delay, like a real request", async () => {
+    vi.useFakeTimers();
+    let answered = false;
+    void quoteShipping(valid, () => 0.5).then(() => {
+      answered = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(599);
+    expect(answered).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(answered).toBe(true);
+  });
+});
 
 describe("validateShippingForm", () => {
   it("accepts a complete destination", () => {
