@@ -100,7 +100,6 @@ describe("useCartStore", () => {
         productId: 21,
         title: "Canvas Tote Bag",
         unitPriceCents: 2900,
-        image: null,
         category: null,
         rating: null,
         quantity: 1,

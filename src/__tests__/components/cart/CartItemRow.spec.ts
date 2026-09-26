@@ -14,6 +14,15 @@ describe("CartItemRow", () => {
     expect(wrapper.text()).toContain("Rating: 4.7 (500 reviews)");
   });
 
+  it("shows a grey placeholder instead of a product image", () => {
+    const wrapper = mount(CartItemRow, { props: { item: cartItem() } });
+
+    expect(wrapper.find("img").exists()).toBe(false);
+    expect(wrapper.find('[aria-hidden="true"].bg-placeholder').exists()).toBe(
+      true,
+    );
+  });
+
   it("shows the unit price and the line total", () => {
     const wrapper = mount(CartItemRow, {
       props: { item: cartItem({ quantity: 2 }) },

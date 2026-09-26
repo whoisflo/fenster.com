@@ -3,7 +3,6 @@ import { computed } from "vue";
 
 import BaseIconButton from "@/components/base/BaseIconButton.vue";
 import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
-import ProductImage from "@/components/cart/ProductImage.vue";
 import { cartGrid } from "@/components/cart/cartGrid";
 import { MAX_QUANTITY, MIN_QUANTITY } from "@/config";
 import { formatMoney } from "@/lib/money";
@@ -32,7 +31,7 @@ const ratingText = computed(() => {
   >
     <div class="flex items-start gap-4">
       <div class="relative shrink-0">
-        <ProductImage :src="item.image" alt="" class="size-20 rounded-xs" />
+        <div aria-hidden="true" class="size-20 rounded-xs bg-placeholder" />
         <span class="absolute -top-2 -right-2">
           <BaseIconButton
             icon="close"

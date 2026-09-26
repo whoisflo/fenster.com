@@ -5,7 +5,6 @@ export interface ApiProduct {
   title: string;
   price: number;
   category: string;
-  image: string;
   rating: { rate: number; count: number };
 }
 
@@ -39,7 +38,6 @@ function isApiProduct(value: unknown): value is ApiProduct {
     typeof value.title === "string" &&
     typeof value.price === "number" &&
     typeof value.category === "string" &&
-    typeof value.image === "string" &&
     isRecord(value.rating) &&
     typeof value.rating.rate === "number" &&
     typeof value.rating.count === "number"
