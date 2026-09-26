@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import BaseAlert from "@/components/base/BaseAlert.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseIcon from "@/components/base/BaseIcon.vue";
 import BaseIconButton from "@/components/base/BaseIconButton.vue";
-import BasePanel from "@/components/base/BasePanel.vue";
 import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
-import BaseTextField from "@/components/base/BaseTextField.vue";
 import type { IconName } from "@/components/base/icons";
 import CartActions from "@/components/cart/CartActions.vue";
 import CartTable from "@/components/cart/CartTable.vue";
-import type { CartItem, LoadStatus } from "@/types/cart";
+import CartTotals from "@/components/cart/CartTotals.vue";
+import ShippingCalculator from "@/components/cart/ShippingCalculator.vue";
+import { grandTotal, subtotal, tax } from "@/lib/pricing";
+import type {
+  CartItem,
+  LoadStatus,
+  ShippingDestination,
+  ShippingQuote,
+} from "@/types/cart";
 import {
   sampleAddedItem,
   sampleCartItems,
@@ -20,9 +26,6 @@ import {
 const iconNames: IconName[] = ["plus", "minus", "close", "spinner"];
 
 const quantity = ref(3);
-const city = ref("");
-const address = ref("");
-const postalCode = ref("1");
 
 // Cart components, driven by local state until the store exists (build step 6).
 type PreviewState = "Loaded" | "Loading" | "Load error" | "Empty";
@@ -69,6 +72,34 @@ function addItem() {
     adding.value = false;
   }, 800);
 }
+
+const shippingQuote = ref<ShippingQuote | null>(null);
+const quoting = ref(false);
+const checkoutClicked = ref(false);
+
+const subtotalCents = computed(() => subtotal(cartItems.value));
+const shippingCents = computed(() =>
+  cartItems.value.length > 0 && shippingQuote.value
+    ? shippingQuote.value.costCents
+    : null,
+);
+const taxCents = computed(() => tax(subtotalCents.value));
+const totalCents = computed(() =>
+  grandTotal({
+    subtotalCents: subtotalCents.value,
+    shippingCents: shippingCents.value ?? 0,
+    taxCents: taxCents.value,
+  }),
+);
+
+function calculateShipping(destination: ShippingDestination) {
+  quoting.value = true;
+  setTimeout(() => {
+    const costCents = (5 + Math.floor(Math.random() * 21)) * 100;
+    shippingQuote.value = { destination, costCents };
+    quoting.value = false;
+  }, 600);
+}
 </script>
 
 <template>
@@ -80,9 +111,7 @@ function addItem() {
     </p>
 
     <section class="space-y-6">
-      <h2 class="font-heading text-xl font-bold text-navy">
-        CartTable + CartActions
-      </h2>
+      <h2 class="font-heading text-xl font-bold text-navy">Cart components</h2>
       <div class="flex flex-wrap gap-2">
         <BaseButton
           v-for="name in stateNames"
@@ -93,20 +122,42 @@ function addItem() {
           {{ name }}
         </BaseButton>
       </div>
-      <div class="max-w-3xl space-y-6">
-        <CartTable
-          :items="cartItems"
-          :status="cartStatus"
-          @update-quantity="updateQuantity"
-          @remove="removeItem"
-          @retry="showState('Loaded')"
-        />
-        <CartActions
-          :adding="adding"
-          :can-clear="cartItems.length > 0"
-          @add="addItem"
-          @clear="cartItems = []"
-        />
+      <p v-if="checkoutClicked" class="text-sm text-navy">
+        Proceed To Checkout was clicked. The real page shows a notification
+        (step 7).
+      </p>
+      <div class="grid gap-12 lg:grid-cols-[2fr_1fr]">
+        <div class="space-y-6">
+          <CartTable
+            :items="cartItems"
+            :status="cartStatus"
+            @update-quantity="updateQuantity"
+            @remove="removeItem"
+            @retry="showState('Loaded')"
+          />
+          <CartActions
+            :adding="adding"
+            :can-clear="cartItems.length > 0"
+            @add="addItem"
+            @clear="cartItems = []"
+          />
+        </div>
+        <div class="grid content-start gap-10 sm:grid-cols-2 lg:grid-cols-1">
+          <CartTotals
+            :subtotal-cents="subtotalCents"
+            :shipping-cents="shippingCents"
+            :tax-cents="taxCents"
+            :total-cents="totalCents"
+            :checkout-disabled="cartItems.length === 0"
+            @checkout="checkoutClicked = true"
+          />
+          <ShippingCalculator
+            :quote="shippingQuote"
+            :loading="quoting"
+            :disabled="cartItems.length === 0"
+            @calculate="calculateShipping"
+          />
+        </div>
       </div>
     </section>
 
@@ -190,41 +241,6 @@ function addItem() {
           <BaseButton variant="secondary">Try again</BaseButton>
         </template>
       </BaseAlert>
-    </section>
-
-    <section class="space-y-4">
-      <h2 class="font-heading text-xl font-bold text-navy">
-        BasePanel + BaseTextField
-      </h2>
-      <div class="max-w-sm">
-        <BasePanel title="Calculate Shipping">
-          <div class="space-y-6">
-            <BaseTextField
-              v-model="city"
-              label="City"
-              hide-label
-              placeholder="Stuttgart"
-              autocomplete="address-level2"
-            />
-            <BaseTextField
-              v-model="address"
-              label="Address"
-              hide-label
-              placeholder="Street and house number"
-              autocomplete="address-line1"
-            />
-            <BaseTextField
-              v-model="postalCode"
-              label="Postal code"
-              hide-label
-              placeholder="12345"
-              autocomplete="postal-code"
-              error="Enter a valid postal code"
-            />
-            <BaseButton variant="accent">Calculate Shipping</BaseButton>
-          </div>
-        </BasePanel>
-      </div>
     </section>
   </div>
 </template>
