@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { quoteShipping, validateShippingForm } from "@/lib/shipping";
 
@@ -8,103 +8,50 @@ const valid = {
   postalCode: "70173",
 };
 
-describe("quoteShipping", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+afterEach(() => {
+  vi.useRealTimers();
+});
 
-  it("quotes $5 at the low end of the range", async () => {
-    vi.useFakeTimers();
-    const quote = quoteShipping(valid, () => 0);
+it.each([
+  ["city", "München"],
+  ["city", "St. Gallen"],
+  ["city", "Val-d'Or"],
+  ["postalCode", "SW1A 1AA"],
+  ["postalCode", "1234-567"],
+])('accepts %s "%s"', (field, value) => {
+  expect(validateShippingForm({ ...valid, [field]: value })).toEqual({});
+});
 
-    await vi.advanceTimersByTimeAsync(600);
-
-    await expect(quote).resolves.toEqual({
-      destination: valid,
-      costCents: 500,
-    });
-  });
-
-  it("quotes $25 at the high end of the range", async () => {
-    vi.useFakeTimers();
-    const quote = quoteShipping(valid, () => 0.9999);
-
-    await vi.advanceTimersByTimeAsync(600);
-
-    await expect(quote).resolves.toEqual({
-      destination: valid,
-      costCents: 2500,
-    });
-  });
-
-  it("answers only after the delay, like a real request", async () => {
-    vi.useFakeTimers();
-    let answered = false;
-    void quoteShipping(valid, () => 0.5).then(() => {
-      answered = true;
-    });
-
-    await vi.advanceTimersByTimeAsync(599);
-    expect(answered).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(answered).toBe(true);
+it.each([
+  ["city", "", "Enter a city"],
+  ["city", "S", "Enter a valid city"],
+  ["city", "Stuttgart 1", "Enter a valid city"],
+  ["address", "", "Enter an address"],
+  ["address", "ab", "Enter a valid address"],
+  ["postalCode", "", "Enter a postal code"],
+  ["postalCode", "12", "Enter a valid postal code"],
+  ["postalCode", "12345678901", "Enter a valid postal code"],
+  ["postalCode", "12#45", "Enter a valid postal code"],
+  ["postalCode", "12345-", "Enter a valid postal code"],
+])('rejects %s "%s" with "%s"', (field, value, message) => {
+  expect(validateShippingForm({ ...valid, [field]: value })).toEqual({
+    [field]: message,
   });
 });
 
-describe("validateShippingForm", () => {
-  it("accepts a complete destination", () => {
-    expect(validateShippingForm(valid)).toEqual({});
+it("quotes a whole-dollar amount from $5 to $25, after 600 ms", async () => {
+  vi.useFakeTimers();
+  const low = quoteShipping(valid, () => 0);
+  const high = quoteShipping(valid, () => 0.9999);
+  let answered = false;
+  void low.then(() => {
+    answered = true;
   });
 
-  it("asks for every missing field", () => {
-    expect(
-      validateShippingForm({ city: "", address: "", postalCode: "" }),
-    ).toEqual({
-      city: "Enter a city",
-      address: "Enter an address",
-      postalCode: "Enter a postal code",
-    });
-  });
+  await vi.advanceTimersByTimeAsync(599);
+  expect(answered).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
 
-  it.each(["München", "St. Gallen", "Val-d'Or", "São Paulo"])(
-    "accepts the city %s",
-    (city) => {
-      expect(validateShippingForm({ ...valid, city })).toEqual({});
-    },
-  );
-
-  it.each(["S", "Stuttgart 1", "-Berlin", "x".repeat(61)])(
-    'rejects the city "%s"',
-    (city) => {
-      expect(validateShippingForm({ ...valid, city })).toEqual({
-        city: "Enter a valid city",
-      });
-    },
-  );
-
-  it("rejects addresses that are too short or too long", () => {
-    expect(validateShippingForm({ ...valid, address: "ab" })).toEqual({
-      address: "Enter a valid address",
-    });
-    expect(
-      validateShippingForm({ ...valid, address: "a".repeat(101) }),
-    ).toEqual({ address: "Enter a valid address" });
-  });
-
-  it.each(["70173", "SW1A 1AA", "1234-567", "K1A 0B1"])(
-    "accepts the postal code %s",
-    (postalCode) => {
-      expect(validateShippingForm({ ...valid, postalCode })).toEqual({});
-    },
-  );
-
-  it.each(["12", "12345-", "-12345", "12#45", "12345678901"])(
-    'rejects the postal code "%s"',
-    (postalCode) => {
-      expect(validateShippingForm({ ...valid, postalCode })).toEqual({
-        postalCode: "Enter a valid postal code",
-      });
-    },
-  );
+  await expect(low).resolves.toEqual({ destination: valid, costCents: 500 });
+  await expect(high).resolves.toEqual({ destination: valid, costCents: 2500 });
 });

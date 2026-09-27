@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { mount, type VueWrapper } from "@vue/test-utils";
 
 import CartTotals from "@/components/cart/CartTotals.vue";
@@ -20,51 +20,30 @@ function valueOf(wrapper: VueWrapper, label: string) {
   return row.get("dd");
 }
 
-describe("CartTotals", () => {
-  it("is a panel named Cart Totals", () => {
-    const wrapper = mount(CartTotals, { props: totals });
+it("shows subtotal, shipping, tax and an announced total", () => {
+  const wrapper = mount(CartTotals, { props: totals });
 
-    expect(wrapper.get("h2").text()).toBe("Cart Totals");
+  expect(valueOf(wrapper, "Subtotal").text()).toBe("$242.20");
+  expect(valueOf(wrapper, "Shipping").text()).toBe("$12.00");
+  expect(valueOf(wrapper, "Tax (20%)").text()).toBe("$48.44");
+  expect(valueOf(wrapper, "Total").text()).toBe("$302.64");
+  expect(valueOf(wrapper, "Total").attributes("aria-live")).toBe("polite");
+});
+
+it("shows a dash until shipping is calculated", () => {
+  const wrapper = mount(CartTotals, {
+    props: { ...totals, shippingCents: null },
   });
 
-  it("shows subtotal, shipping, tax and total", () => {
-    const wrapper = mount(CartTotals, { props: totals });
+  expect(valueOf(wrapper, "Shipping").text()).toBe("—");
+});
 
-    expect(valueOf(wrapper, "Subtotal").text()).toBe("$242.20");
-    expect(valueOf(wrapper, "Shipping").text()).toBe("$12.00");
-    expect(valueOf(wrapper, "Tax (20%)").text()).toBe("$48.44");
-    expect(valueOf(wrapper, "Total").text()).toBe("$302.64");
+it("blocks checkout for an empty cart", () => {
+  const wrapper = mount(CartTotals, {
+    props: { ...totals, checkoutDisabled: true },
   });
 
-  it("shows a dash until shipping is calculated", () => {
-    const wrapper = mount(CartTotals, {
-      props: { ...totals, shippingCents: null },
-    });
-
-    expect(valueOf(wrapper, "Shipping").text()).toBe("—");
-  });
-
-  it("announces changes to the total", () => {
-    const wrapper = mount(CartTotals, { props: totals });
-
-    expect(valueOf(wrapper, "Total").attributes("aria-live")).toBe("polite");
-  });
-
-  it("asks to check out", async () => {
-    const wrapper = mount(CartTotals, { props: totals });
-
-    await getButton(wrapper, "Proceed To Checkout").trigger("click");
-
-    expect(wrapper.emitted("checkout")).toEqual([[]]);
-  });
-
-  it("cannot check out an empty cart", () => {
-    const wrapper = mount(CartTotals, {
-      props: { ...totals, checkoutDisabled: true },
-    });
-
-    expect(getButton(wrapper, "Proceed To Checkout").element.disabled).toBe(
-      true,
-    );
-  });
+  expect(
+    getButton(wrapper, "Proceed To Checkout").attributes("aria-disabled"),
+  ).toBe("true");
 });

@@ -31,10 +31,5 @@ export function useFormValidation<
     (Object.keys(values) as Field[]).find((field) => errors.value[field]),
   );
 
-  function reset() {
-    submitted = false;
-    errors.value = {};
-  }
-
-  return { errors, validateAll, firstInvalidField, reset };
+  return { errors, validateAll, firstInvalidField };
 }

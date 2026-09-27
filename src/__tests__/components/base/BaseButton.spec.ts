@@ -1,78 +1,68 @@
-import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, expect, it, vi } from "vitest";
+import { enableAutoUnmount, mount } from "@vue/test-utils";
+import { h } from "vue";
 
-import BaseButton from '@/components/base/BaseButton.vue'
+import BaseButton from "@/components/base/BaseButton.vue";
 
-describe('BaseButton', () => {
-  it('renders its label', () => {
-    const wrapper = mount(BaseButton, { slots: { default: 'Add Item' } })
+enableAutoUnmount(afterEach);
 
-    expect(wrapper.get('button').text()).toBe('Add Item')
-  })
+function mountButton(
+  props: { disabled?: boolean; loading?: boolean; loadingText?: string } = {},
+) {
+  const onClick = vi.fn();
+  const wrapper = mount(BaseButton, {
+    props,
+    attrs: { onClick },
+    slots: { default: "Add Item" },
+  });
+  return { button: wrapper.get("button"), onClick };
+}
 
-  it('is a plain button by default, so it never submits a form by accident', () => {
-    const wrapper = mount(BaseButton, { slots: { default: 'Add Item' } })
+it("is a plain button that passes clicks on", async () => {
+  const { button, onClick } = mountButton();
 
-    expect(wrapper.get('button').attributes('type')).toBe('button')
-  })
+  await button.trigger("click");
 
-  it('can be a submit button', () => {
-    const wrapper = mount(BaseButton, {
-      props: { type: 'submit' },
-      slots: { default: 'Calculate Shipping' },
-    })
+  expect(button.attributes("type")).toBe("button");
+  expect(onClick).toHaveBeenCalledOnce();
+});
 
-    expect(wrapper.get('button').attributes('type')).toBe('submit')
-  })
+it.each([
+  [{ disabled: true }, "Add Item"],
+  [{ loading: true, loadingText: "Adding…" }, "Adding…"],
+])(
+  "with %o it stays focusable but unavailable and ignores clicks",
+  async (props, label) => {
+    const { button, onClick } = mountButton(props);
 
-  it('passes clicks through to the parent', async () => {
-    const onClick = vi.fn()
-    const wrapper = mount(BaseButton, { attrs: { onClick }, slots: { default: 'Add Item' } })
+    await button.trigger("click");
 
-    await wrapper.get('button').trigger('click')
+    expect(button.text()).toBe(label);
+    expect(button.attributes("aria-disabled")).toBe("true");
+    expect(button.element.disabled).toBe(false);
+    expect(onClick).not.toHaveBeenCalled();
+  },
+);
 
-    expect(onClick).toHaveBeenCalledOnce()
-  })
+it.each([
+  [false, 1],
+  [true, 0],
+])(
+  "with loading %s it submits its form %i time(s)",
+  async (loading, submits) => {
+    const onSubmit = vi.fn((event: Event) => event.preventDefault());
+    const wrapper = mount(
+      {
+        render: () =>
+          h("form", { onSubmit }, [
+            h(BaseButton, { type: "submit", loading }, () => "Calculate"),
+          ]),
+      },
+      { attachTo: document.body },
+    );
 
-  it('can be disabled', () => {
-    const wrapper = mount(BaseButton, {
-      props: { disabled: true },
-      slots: { default: 'Clear Cart' },
-    })
+    await wrapper.get("button").trigger("click");
 
-    expect(wrapper.get('button').element.disabled).toBe(true)
-  })
-
-  it('is disabled and shows the loading text while loading', () => {
-    const wrapper = mount(BaseButton, {
-      props: { loading: true, loadingText: 'Adding…' },
-      slots: { default: 'Add Item' },
-    })
-
-    const button = wrapper.get('button')
-    expect(button.element.disabled).toBe(true)
-    expect(button.text()).toBe('Adding…')
-  })
-
-  it('keeps its label while loading when no loading text is given', () => {
-    const wrapper = mount(BaseButton, {
-      props: { loading: true },
-      slots: { default: 'Add Item' },
-    })
-
-    expect(wrapper.get('button').text()).toBe('Add Item')
-  })
-
-  it('ignores clicks while loading', async () => {
-    const onClick = vi.fn()
-    const wrapper = mount(BaseButton, {
-      props: { loading: true },
-      attrs: { onClick },
-      slots: { default: 'Add Item' },
-    })
-
-    await wrapper.get('button').trigger('click')
-
-    expect(onClick).not.toHaveBeenCalled()
-  })
-})
+    expect(onSubmit).toHaveBeenCalledTimes(submits);
+  },
+);

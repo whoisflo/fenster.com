@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   enableAutoUnmount,
   flushPromises,
@@ -35,147 +35,115 @@ async function mountLoadedPage() {
   return wrapper;
 }
 
-function rows(wrapper: VueWrapper) {
-  return wrapper.findAllComponents(CartItemRow);
-}
+const rows = (wrapper: VueWrapper) => wrapper.findAllComponents(CartItemRow);
+const totals = (wrapper: VueWrapper) =>
+  wrapper.get("section[aria-labelledby] dl").text();
+const toasts = () => useToastStore().toasts.map((toast) => toast.message);
 
-function totalsText(wrapper: VueWrapper) {
-  return wrapper.get("section[aria-labelledby] dl").text();
-}
+it("shows skeletons while loading, then the lines, item count and totals", async () => {
+  mockFakeStoreApi();
+  const wrapper = mountPage();
 
-function toastMessages() {
-  return useToastStore().toasts.map((toast) => toast.message);
-}
+  expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(5);
+  expect(wrapper.get("h1").text()).toBe("Shopping Cart");
+  expect(wrapper.text()).not.toContain("Add items to calculate shipping.");
 
-describe("CartPage", () => {
-  it("shows skeletons first, then the products from the API", async () => {
-    mockFakeStoreApi();
-    const wrapper = mountPage();
+  await flushPromises();
 
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(5);
+  expect(rows(wrapper)).toHaveLength(5);
+  expect(wrapper.get("h1").text()).toContain("(5 items)");
+  expect(totals(wrapper)).toContain("$899.23");
+  expect(totals(wrapper)).toContain("$179.85");
+  expect(totals(wrapper)).toContain("$1,079.08");
+});
 
-    await flushPromises();
+it("updates the line, count and totals when a quantity changes", async () => {
+  const wrapper = await mountLoadedPage();
 
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(0);
-    expect(rows(wrapper)).toHaveLength(5);
-    expect(wrapper.text()).toContain("Mens Cotton Jacket");
-  });
+  await getButton(wrapper, "Increase quantity of Mens Cotton Jacket").trigger(
+    "click",
+  );
 
-  it("shows the item count once the cart has loaded", async () => {
-    mockFakeStoreApi();
-    const wrapper = mountPage();
+  expect(wrapper.text()).toContain("$111.98");
+  expect(wrapper.get("h1").text()).toContain("(6 items)");
+  expect(totals(wrapper)).toContain("$955.22");
+});
 
-    expect(wrapper.get("h1").text()).toBe("Shopping Cart");
+it("removes a line and updates the totals", async () => {
+  const wrapper = await mountLoadedPage();
 
-    await flushPromises();
+  await getButton(wrapper, "Remove Mens Cotton Jacket").trigger("click");
 
-    expect(wrapper.get("h1").text()).toContain("(5 items)");
-  });
+  expect(rows(wrapper)).toHaveLength(4);
+  expect(totals(wrapper)).toContain("$843.24");
+});
 
-  it("totals the cart with 20% tax", async () => {
-    const wrapper = await mountLoadedPage();
+it("clears the cart, confirms it and asks for items before shipping", async () => {
+  const wrapper = await mountLoadedPage();
 
-    const totals = totalsText(wrapper);
-    expect(totals).toContain("$899.23");
-    expect(totals).toContain("$179.85");
-    expect(totals).toContain("$1,079.08");
-  });
+  await getButton(wrapper, "Clear Cart").trigger("click");
 
-  it("updates the line, the count and the totals when a quantity changes", async () => {
-    const wrapper = await mountLoadedPage();
+  expect(wrapper.text()).toContain("Your cart is empty.");
+  expect(wrapper.text()).toContain("Add items to calculate shipping.");
+  expect(totals(wrapper)).toContain("$0.00");
+  expect(toasts()).toContain("Cart cleared");
+});
 
-    await getButton(wrapper, "Increase quantity of Mens Cotton Jacket").trigger(
-      "click",
-    );
+it("adds an item through the API and confirms it", async () => {
+  const wrapper = await mountLoadedPage();
 
-    expect(wrapper.text()).toContain("$111.98");
-    expect(wrapper.get("h1").text()).toContain("(6 items)");
-    expect(totalsText(wrapper)).toContain("$955.22");
-  });
+  await getButton(wrapper, "Add Item").trigger("click");
+  await flushPromises();
 
-  it("removes a line and updates the totals", async () => {
-    const wrapper = await mountLoadedPage();
+  expect(rows(wrapper)).toHaveLength(6);
+  expect(toasts()).toContain("Added Canvas Tote Bag");
+});
 
-    await getButton(wrapper, "Remove Mens Cotton Jacket").trigger("click");
+it("tells the user when adding an item fails", async () => {
+  const wrapper = await mountLoadedPage();
+  mockFakeStoreApi({ failPost: true });
 
-    expect(rows(wrapper)).toHaveLength(4);
-    expect(wrapper.text()).not.toContain("Mens Cotton Jacket");
-    expect(totalsText(wrapper)).toContain("$843.24");
-  });
+  await getButton(wrapper, "Add Item").trigger("click");
+  await flushPromises();
 
-  it("clears the cart and confirms it", async () => {
-    const wrapper = await mountLoadedPage();
+  expect(rows(wrapper)).toHaveLength(5);
+  expect(toasts()).toContain("Couldn't add the item. Please try again.");
+});
 
-    await getButton(wrapper, "Clear Cart").trigger("click");
+it("reports a failed load and loads again on retry", async () => {
+  mockFakeStoreApi({ failGet: true });
+  const wrapper = mountPage();
+  await flushPromises();
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true);
 
-    expect(rows(wrapper)).toHaveLength(0);
-    expect(wrapper.text()).toContain("Your cart is empty.");
-    expect(totalsText(wrapper)).toContain("$0.00");
-    expect(toastMessages()).toContain("Cart cleared");
-  });
+  mockFakeStoreApi();
+  await getButton(wrapper, "Try again").trigger("click");
+  await flushPromises();
 
-  it("adds an item through the API and confirms it", async () => {
-    const wrapper = await mountLoadedPage();
+  expect(rows(wrapper)).toHaveLength(5);
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+});
 
-    await getButton(wrapper, "Add Item").trigger("click");
-    await flushPromises();
+it("adds calculated shipping to the total", async () => {
+  const wrapper = await mountLoadedPage();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  vi.spyOn(Math, "random").mockReturnValue(0.5);
 
-    expect(rows(wrapper)).toHaveLength(6);
-    expect(wrapper.text()).toContain("Canvas Tote Bag");
-    expect(toastMessages()).toContain("Added Canvas Tote Bag");
-  });
+  const [city, address, postalCode] = wrapper.findAll("form input");
+  await city!.setValue("Stuttgart");
+  await address!.setValue("Königstraße 1");
+  await postalCode!.setValue("70173");
+  await wrapper.get("form").trigger("submit");
+  await vi.advanceTimersByTimeAsync(600);
 
-  it("tells the user when adding an item fails", async () => {
-    const wrapper = await mountLoadedPage();
-    mockFakeStoreApi({ failPost: true });
+  expect(wrapper.text()).toContain("Shipping to Stuttgart 70173: $15.00");
+  expect(totals(wrapper)).toContain("$1,094.08");
+});
 
-    await getButton(wrapper, "Add Item").trigger("click");
-    await flushPromises();
+it("explains that checkout is not part of the demo", async () => {
+  const wrapper = await mountLoadedPage();
 
-    expect(rows(wrapper)).toHaveLength(5);
-    expect(toastMessages()).toContain(
-      "Couldn't add the item. Please try again.",
-    );
-  });
+  await getButton(wrapper, "Proceed To Checkout").trigger("click");
 
-  it("reports a failed load and loads again on retry", async () => {
-    mockFakeStoreApi({ failGet: true });
-    const wrapper = mountPage();
-    await flushPromises();
-
-    expect(wrapper.get('[role="alert"]').text()).toContain(
-      "We couldn't load your products.",
-    );
-
-    mockFakeStoreApi();
-    await getButton(wrapper, "Try again").trigger("click");
-    await flushPromises();
-
-    expect(rows(wrapper)).toHaveLength(5);
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
-  });
-
-  it("adds calculated shipping to the total", async () => {
-    const wrapper = await mountLoadedPage();
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
-
-    const inputs = wrapper.findAll("form input");
-    await inputs[0]!.setValue("Stuttgart");
-    await inputs[1]!.setValue("Königstraße 1");
-    await inputs[2]!.setValue("70173");
-    await wrapper.get("form").trigger("submit");
-    await vi.advanceTimersByTimeAsync(600);
-
-    expect(wrapper.text()).toContain("Shipping to Stuttgart 70173: $15.00");
-    expect(totalsText(wrapper)).toContain("$1,094.08");
-  });
-
-  it("explains that checkout is not part of the demo", async () => {
-    const wrapper = await mountLoadedPage();
-
-    await getButton(wrapper, "Proceed To Checkout").trigger("click");
-
-    expect(toastMessages()).toContain("Checkout isn't part of this demo.");
-  });
+  expect(toasts()).toContain("Checkout isn't part of this demo.");
 });

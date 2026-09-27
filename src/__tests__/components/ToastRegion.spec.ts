@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { enableAutoUnmount, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia, type Pinia } from "pinia";
+import { createPinia, setActivePinia } from "pinia";
+import { nextTick } from "vue";
 
 import ToastRegion from "@/components/ToastRegion.vue";
 import { useToastStore } from "@/stores/toast";
@@ -8,41 +9,28 @@ import { getButton } from "@/__tests__/helpers";
 
 enableAutoUnmount(afterEach);
 
-describe("ToastRegion", () => {
-  let pinia: Pinia;
+function mountRegion() {
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  return mount(ToastRegion, { global: { plugins: [pinia] } });
+}
 
-  beforeEach(() => {
-    pinia = createPinia();
-    setActivePinia(pinia);
-  });
+let wrapper: ReturnType<typeof mountRegion>;
 
-  const mountRegion = () =>
-    mount(ToastRegion, { global: { plugins: [pinia] } });
+beforeEach(async () => {
+  wrapper = mountRegion();
+  useToastStore().show("Cart cleared");
+  await nextTick();
+});
 
-  it("is a polite live region, so screen readers announce new messages", () => {
-    const wrapper = mountRegion();
+it("shows messages in a polite live region", () => {
+  expect(wrapper.attributes("aria-live")).toBe("polite");
+  expect(wrapper.text()).toContain("Cart cleared");
+});
 
-    expect(wrapper.attributes("aria-live")).toBe("polite");
-  });
+it("dismisses a message", async () => {
+  await getButton(wrapper, "Dismiss notification").trigger("click");
 
-  it("shows the messages from the toast store", async () => {
-    const wrapper = mountRegion();
-
-    useToastStore().show("Added Canvas Tote Bag", "success");
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.text()).toContain("Added Canvas Tote Bag");
-  });
-
-  it("dismisses a message", async () => {
-    const wrapper = mountRegion();
-    const toast = useToastStore();
-    toast.show("Cart cleared");
-    await wrapper.vm.$nextTick();
-
-    await getButton(wrapper, "Dismiss notification").trigger("click");
-
-    expect(toast.toasts).toEqual([]);
-    expect(wrapper.text()).not.toContain("Cart cleared");
-  });
+  expect(useToastStore().toasts).toEqual([]);
+  expect(wrapper.text()).not.toContain("Cart cleared");
 });

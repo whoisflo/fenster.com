@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, useTemplateRef, watch } from "vue";
 
 import BaseAlert from "@/components/base/BaseAlert.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
@@ -9,14 +9,9 @@ import { cartGrid } from "@/components/cart/cartGrid";
 import { INITIAL_PRODUCT_COUNT } from "@/config";
 import type { CartItem, LoadStatus } from "@/types/cart";
 
-const {
-  items,
-  status,
-  skeletonCount = INITIAL_PRODUCT_COUNT,
-} = defineProps<{
+const { items, status } = defineProps<{
   items: CartItem[];
   status: LoadStatus;
-  skeletonCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -27,6 +22,27 @@ const emit = defineEmits<{
 
 const isLoading = computed(() => status === "idle" || status === "loading");
 const isEmpty = computed(() => status === "success" && items.length === 0);
+
+const rowRefs = useTemplateRef<InstanceType<typeof CartItemRow>[]>("rows");
+let focusIndexAfterRemoval: number | null = null;
+
+function remove(key: string, index: number) {
+  focusIndexAfterRemoval = index;
+  emit("remove", key);
+}
+
+watch(
+  () => items.length,
+  () => {
+    if (focusIndexAfterRemoval === null) return;
+    const next = items[Math.min(focusIndexAfterRemoval, items.length - 1)];
+    focusIndexAfterRemoval = null;
+    rowRefs.value
+      ?.find((row) => row.$props.item.key === next?.key)
+      ?.focusRemoveButton();
+  },
+  { flush: "post" },
+);
 </script>
 
 <template>
@@ -61,14 +77,18 @@ const isEmpty = computed(() => status === "success" && items.length === 0);
       :aria-busy="isLoading ? 'true' : undefined"
     >
       <template v-if="isLoading">
-        <CartItemSkeleton v-for="n in skeletonCount" :key="`skeleton-${n}`" />
+        <CartItemSkeleton
+          v-for="n in INITIAL_PRODUCT_COUNT"
+          :key="`skeleton-${n}`"
+        />
       </template>
       <CartItemRow
-        v-for="item in items"
+        v-for="(item, index) in items"
+        ref="rows"
         :key="item.key"
         :item="item"
         @update-quantity="emit('updateQuantity', item.key, $event)"
-        @remove="emit('remove', item.key)"
+        @remove="remove(item.key, index)"
       />
     </ul>
 

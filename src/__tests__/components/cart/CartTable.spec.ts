@@ -1,107 +1,108 @@
-import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
+import { afterEach, expect, it } from "vitest";
+import {
+  enableAutoUnmount,
+  flushPromises,
+  mount,
+  type VueWrapper,
+} from "@vue/test-utils";
 
 import CartItemRow from "@/components/cart/CartItemRow.vue";
 import CartItemSkeleton from "@/components/cart/CartItemSkeleton.vue";
 import CartTable from "@/components/cart/CartTable.vue";
+import type { CartItem, LoadStatus } from "@/types/cart";
 import {
   sampleAddedItem,
   sampleCartItems,
 } from "@/__tests__/fixtures/cartItems";
 import { getButton } from "@/__tests__/helpers";
 
-describe("CartTable", () => {
-  it("shows one row per item in a named list", () => {
-    const items = sampleCartItems();
-    const wrapper = mount(CartTable, { props: { items, status: "success" } });
+enableAutoUnmount(afterEach);
 
-    expect(wrapper.findAllComponents(CartItemRow)).toHaveLength(items.length);
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(0);
-    expect(wrapper.get("ul").attributes("aria-label")).toBe("Cart items");
+function mountTable(items: CartItem[], status: LoadStatus = "success") {
+  let current = items;
+  const wrapper: VueWrapper = mount(CartTable, {
+    props: {
+      items,
+      status,
+      onRemove: (key: string) => {
+        current = current.filter((item) => item.key !== key);
+        return wrapper.setProps({ items: current });
+      },
+    },
+    attachTo: document.body,
   });
+  return wrapper;
+}
 
-  it("shows skeletons while loading", () => {
-    const wrapper = mount(CartTable, {
-      props: { items: [], status: "loading" },
-    });
+it("lists one line per item", () => {
+  const wrapper = mountTable(sampleCartItems());
 
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(5);
-    expect(wrapper.get("ul").attributes("aria-busy")).toBe("true");
-  });
+  expect(wrapper.get("ul").attributes("aria-label")).toBe("Cart items");
+  expect(wrapper.findAllComponents(CartItemRow)).toHaveLength(5);
+  expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(0);
+});
 
-  it("shows skeletons before the first load starts, so an empty cart never flashes", () => {
-    const wrapper = mount(CartTable, { props: { items: [], status: "idle" } });
+it.each(["idle", "loading"] as const)(
+  "shows five hidden skeletons above existing lines while %s",
+  (status) => {
+    const wrapper = mountTable([sampleAddedItem()], status);
+    const skeletons = wrapper.findAllComponents(CartItemSkeleton);
 
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(5);
-    expect(wrapper.text()).not.toContain("Your cart is empty.");
-  });
-
-  it("shows as many skeletons as asked for", () => {
-    const wrapper = mount(CartTable, {
-      props: { items: [], status: "loading", skeletonCount: 2 },
-    });
-
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(2);
-  });
-
-  it("keeps existing lines visible while loading", () => {
-    const wrapper = mount(CartTable, {
-      props: { items: [sampleAddedItem()], status: "loading" },
-    });
-
-    expect(wrapper.findAllComponents(CartItemSkeleton)).toHaveLength(5);
+    expect(skeletons).toHaveLength(5);
+    expect(skeletons.every((s) => s.attributes("aria-hidden") === "true")).toBe(
+      true,
+    );
     expect(wrapper.findAllComponents(CartItemRow)).toHaveLength(1);
-  });
+    expect(wrapper.get("ul").attributes("aria-busy")).toBe("true");
+  },
+);
 
-  it("reports a failed load and offers a retry", async () => {
-    const wrapper = mount(CartTable, { props: { items: [], status: "error" } });
+it("reports a failed load and offers a retry, without calling the cart empty", async () => {
+  const wrapper = mountTable([], "error");
 
-    expect(wrapper.get('[role="alert"]').text()).toContain(
-      "We couldn't load your products.",
-    );
+  expect(wrapper.get('[role="alert"]').text()).toContain(
+    "We couldn't load your products.",
+  );
+  expect(wrapper.text()).not.toContain("Your cart is empty.");
 
-    await getButton(wrapper, "Try again").trigger("click");
+  await getButton(wrapper, "Try again").trigger("click");
 
-    expect(wrapper.emitted("retry")).toEqual([[]]);
-  });
+  expect(wrapper.emitted("retry")).toEqual([[]]);
+});
 
-  it("does not call the cart empty while the load error shows", () => {
-    const wrapper = mount(CartTable, { props: { items: [], status: "error" } });
+it("shows the empty state when there is nothing to list", () => {
+  const wrapper = mountTable([]);
 
-    expect(wrapper.text()).not.toContain("Your cart is empty.");
-  });
+  expect(wrapper.get('[role="status"]').text()).toContain(
+    "Your cart is empty.",
+  );
+  expect(wrapper.find("ul").exists()).toBe(false);
+});
 
-  it("shows the empty state when the cart has no items", () => {
-    const wrapper = mount(CartTable, {
-      props: { items: [], status: "success" },
-    });
+it("passes quantity changes and removals on with the item key", async () => {
+  const wrapper = mountTable(sampleCartItems());
 
-    expect(wrapper.get('[role="status"]').text()).toContain(
-      "Your cart is empty.",
-    );
-    expect(wrapper.text()).toContain("Use Add Item to add a product.");
-    expect(wrapper.find("ul").exists()).toBe(false);
-  });
+  await getButton(wrapper, "Increase quantity of Mens Cotton Jacket").trigger(
+    "click",
+  );
+  await getButton(wrapper, "Remove Mens Cotton Jacket").trigger("click");
 
-  it("passes quantity changes on with the item key", async () => {
-    const wrapper = mount(CartTable, {
-      props: { items: sampleCartItems(), status: "success" },
-    });
+  expect(wrapper.emitted("updateQuantity")).toEqual([["product-3", 2]]);
+  expect(wrapper.emitted("remove")).toEqual([["product-3"]]);
+});
 
-    await getButton(wrapper, "Increase quantity of Mens Cotton Jacket").trigger(
-      "click",
-    );
+it("moves focus to the next line after a removal, or the previous one at the end", async () => {
+  const wrapper = mountTable(sampleCartItems());
+  const remove = (title: string) => getButton(wrapper, `Remove ${title}`);
 
-    expect(wrapper.emitted("updateQuantity")).toEqual([["product-3", 2]]);
-  });
+  await remove("Mens Cotton Jacket").trigger("click");
+  await flushPromises();
+  expect(document.activeElement).toBe(remove("Mens Casual Slim Fit").element);
 
-  it("passes removals on with the item key", async () => {
-    const wrapper = mount(CartTable, {
-      props: { items: sampleCartItems(), status: "success" },
-    });
-
-    await getButton(wrapper, "Remove Mens Cotton Jacket").trigger("click");
-
-    expect(wrapper.emitted("remove")).toEqual([["product-3"]]);
-  });
+  remove("Mens Casual Premium Slim Fit T-Shirts").element.focus();
+  await remove(
+    "John Hardy Women's Legends Naga Gold & Silver Dragon Station Chain Bracelet",
+  ).trigger("click");
+  await flushPromises();
+  expect(document.activeElement).toBe(remove("Mens Casual Slim Fit").element);
 });

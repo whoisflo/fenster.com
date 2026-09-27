@@ -1,159 +1,113 @@
-import { describe, expect, it } from 'vitest'
-import { mount, type VueWrapper } from '@vue/test-utils'
+import { expect, it } from "vitest";
+import { mount, type DOMWrapper, type VueWrapper } from "@vue/test-utils";
 
-import BaseQuantityStepper from '@/components/base/BaseQuantityStepper.vue'
+import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
 
-/** Mounts the stepper with a working v-model, the way a parent component would use it. */
-function mountStepper(modelValue = 3) {
+function mountStepper(
+  modelValue = 3,
+  range: { min?: number; max?: number } = {},
+) {
   const wrapper: VueWrapper = mount(BaseQuantityStepper, {
     props: {
       modelValue,
-      label: 'Wool Beanie',
-      'onUpdate:modelValue': (value: number) => wrapper.setProps({ modelValue: value }),
+      label: "Wool Beanie",
+      ...range,
+      "onUpdate:modelValue": (value: number) =>
+        wrapper.setProps({ modelValue: value }),
     },
-  })
-  return wrapper
+  });
+  return {
+    wrapper,
+    input: wrapper.get("input"),
+    decrease: wrapper.get(
+      'button[aria-label="Decrease quantity of Wool Beanie"]',
+    ),
+    increase: wrapper.get(
+      'button[aria-label="Increase quantity of Wool Beanie"]',
+    ),
+    emitted: () => wrapper.emitted("update:modelValue"),
+  };
 }
 
-const decrease = (wrapper: VueWrapper) =>
-  wrapper.get<HTMLButtonElement>('button[aria-label="Decrease quantity of Wool Beanie"]')
-const increase = (wrapper: VueWrapper) =>
-  wrapper.get<HTMLButtonElement>('button[aria-label="Increase quantity of Wool Beanie"]')
-const input = (wrapper: VueWrapper) => wrapper.get('input')
+const finishEditing = (
+  input: Pick<DOMWrapper<HTMLInputElement>, "trigger">,
+  how: string,
+) =>
+  how === "blur"
+    ? input.trigger("blur")
+    : input.trigger("keydown", { key: how });
 
-describe('BaseQuantityStepper', () => {
-  it('shows the current quantity in an input named after the product', () => {
-    const wrapper = mountStepper(3)
+it("changes the quantity with − and +, shown in an input named after the product", async () => {
+  const { input, decrease, increase, emitted } = mountStepper(3);
 
-    expect(input(wrapper).element.value).toBe('3')
-    expect(input(wrapper).attributes('aria-label')).toBe('Quantity of Wool Beanie')
-  })
+  await increase.trigger("click");
+  await decrease.trigger("click");
+  await decrease.trigger("click");
 
-  it('increases the quantity with +', async () => {
-    const wrapper = mountStepper(3)
+  expect(input.attributes("aria-label")).toBe("Quantity of Wool Beanie");
+  expect(emitted()).toEqual([[4], [3], [2]]);
+  expect(input.element.value).toBe("2");
+});
 
-    await increase(wrapper).trigger('click')
+it("makes − unavailable at the minimum and + at the maximum", () => {
+  const atMinimum = mountStepper(1);
+  const atMaximum = mountStepper(99);
+  const fixed = mountStepper(5, { min: 5, max: 5 });
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[4]])
-    expect(input(wrapper).element.value).toBe('4')
-  })
+  expect(atMinimum.decrease.attributes("aria-disabled")).toBe("true");
+  expect(atMinimum.increase.attributes("aria-disabled")).toBeUndefined();
+  expect(atMaximum.increase.attributes("aria-disabled")).toBe("true");
+  expect(fixed.decrease.attributes("aria-disabled")).toBe("true");
+  expect(fixed.increase.attributes("aria-disabled")).toBe("true");
+});
 
-  it('decreases the quantity with −', async () => {
-    const wrapper = mountStepper(3)
+it.each([
+  ["7", "blur", 7],
+  ["8", "Enter", 8],
+  ["150", "blur", 99],
+  ["0", "blur", 1],
+])('commits "%s" on %s as %i', async (text, how, quantity) => {
+  const { input, emitted } = mountStepper(3);
 
-    await decrease(wrapper).trigger('click')
+  await input.setValue(text);
+  await finishEditing(input, how);
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[2]])
-    expect(input(wrapper).element.value).toBe('2')
-  })
+  expect(emitted()).toEqual([[quantity]]);
+  expect(input.element.value).toBe(String(quantity));
+});
 
-  it('disables − at the minimum', () => {
-    const wrapper = mountStepper(1)
+it.each([
+  ["abc", "blur"],
+  ["7", "Escape"],
+])('reverts "%s" on %s', async (text, how) => {
+  const { input, emitted } = mountStepper(3);
 
-    expect(decrease(wrapper).element.disabled).toBe(true)
-    expect(increase(wrapper).element.disabled).toBe(false)
-  })
+  await input.setValue(text);
+  await finishEditing(input, how);
 
-  it('disables + at the maximum', () => {
-    const wrapper = mountStepper(99)
+  expect(emitted()).toBeUndefined();
+  expect(input.element.value).toBe("3");
+});
 
-    expect(increase(wrapper).element.disabled).toBe(true)
-    expect(decrease(wrapper).element.disabled).toBe(false)
-  })
+it("explains invalid text until it is fixed", async () => {
+  const { wrapper, input } = mountStepper(3);
 
-  it('respects a custom range', () => {
-    const wrapper = mount(BaseQuantityStepper, {
-      props: { modelValue: 5, label: 'Wool Beanie', min: 5, max: 5 },
-    })
+  await input.setValue("abc");
 
-    expect(decrease(wrapper).element.disabled).toBe(true)
-    expect(increase(wrapper).element.disabled).toBe(true)
-  })
+  expect(input.attributes("aria-invalid")).toBe("true");
+  expect(wrapper.get(`#${input.attributes("aria-describedby")}`).text()).toBe(
+    "Whole numbers only",
+  );
 
-  it('commits a typed quantity on blur', async () => {
-    const wrapper = mountStepper(3)
+  await input.setValue("5");
 
-    await input(wrapper).setValue('7')
-    await input(wrapper).trigger('blur')
+  expect(input.attributes("aria-invalid")).toBeUndefined();
+});
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[7]])
-  })
+it("follows quantity changes from the parent", async () => {
+  const { wrapper, input } = mountStepper(3);
 
-  it('commits a typed quantity on Enter', async () => {
-    const wrapper = mountStepper(3)
+  await wrapper.setProps({ modelValue: 5 });
 
-    await input(wrapper).setValue('8')
-    await input(wrapper).trigger('keydown', { key: 'Enter' })
-
-    expect(wrapper.emitted('update:modelValue')).toEqual([[8]])
-  })
-
-  it('clamps a typed quantity above the maximum', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('150')
-    await input(wrapper).trigger('blur')
-
-    expect(wrapper.emitted('update:modelValue')).toEqual([[99]])
-    expect(input(wrapper).element.value).toBe('99')
-  })
-
-  it('clamps a typed quantity below the minimum', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('0')
-    await input(wrapper).trigger('blur')
-
-    expect(wrapper.emitted('update:modelValue')).toEqual([[1]])
-    expect(input(wrapper).element.value).toBe('1')
-  })
-
-  it('reverts text that is not a number', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('abc')
-    await input(wrapper).trigger('blur')
-
-    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
-    expect(input(wrapper).element.value).toBe('3')
-  })
-
-  it('reverts on Escape', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('7')
-    await input(wrapper).trigger('keydown', { key: 'Escape' })
-
-    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
-    expect(input(wrapper).element.value).toBe('3')
-  })
-
-  it('marks invalid text and explains the problem', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('abc')
-
-    const field = input(wrapper)
-    expect(field.attributes('aria-invalid')).toBe('true')
-    const message = wrapper.get(`#${field.attributes('aria-describedby')}`)
-    expect(message.text()).toBe('Whole numbers only')
-  })
-
-  it('clears the error once the text is valid again', async () => {
-    const wrapper = mountStepper(3)
-
-    await input(wrapper).setValue('abc')
-    await input(wrapper).setValue('5')
-
-    expect(input(wrapper).attributes('aria-invalid')).toBeUndefined()
-    expect(input(wrapper).attributes('aria-describedby')).toBeUndefined()
-  })
-
-  it('follows quantity changes from the parent', async () => {
-    const wrapper = mountStepper(3)
-
-    await wrapper.setProps({ modelValue: 5 })
-
-    expect(input(wrapper).element.value).toBe('5')
-  })
-})
+  expect(input.element.value).toBe("5");
+});

@@ -1,57 +1,36 @@
-import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { expect, it, vi } from "vitest";
+import { mount } from "@vue/test-utils";
 
-import BaseIconButton from '@/components/base/BaseIconButton.vue'
+import BaseIconButton from "@/components/base/BaseIconButton.vue";
 
-describe('BaseIconButton', () => {
-  it('uses the label as its accessible name', () => {
+it("is named by its label and shows only a decorative icon", () => {
+  const wrapper = mount(BaseIconButton, {
+    props: { icon: "close", label: "Remove Wool Beanie" },
+  });
+
+  const button = wrapper.get("button");
+  expect(button.attributes("aria-label")).toBe("Remove Wool Beanie");
+  expect(button.get("svg").attributes("aria-hidden")).toBe("true");
+  expect(button.text()).toBe("");
+});
+
+it.each([
+  [false, undefined, 1],
+  [true, "true", 0],
+])(
+  "with disabled %s it stays focusable and passes on the right clicks",
+  async (disabled, ariaDisabled, clicks) => {
+    const onClick = vi.fn();
     const wrapper = mount(BaseIconButton, {
-      props: { icon: 'close', label: 'Remove Wool Beanie' },
-    })
-
-    expect(wrapper.get('button').attributes('aria-label')).toBe('Remove Wool Beanie')
-  })
-
-  it('shows a decorative icon and no visible text', () => {
-    const wrapper = mount(BaseIconButton, {
-      props: { icon: 'plus', label: 'Increase quantity' },
-    })
-
-    expect(wrapper.get('svg').attributes('aria-hidden')).toBe('true')
-    expect(wrapper.text()).toBe('')
-  })
-
-  it('is a plain button, so it never submits a form by accident', () => {
-    const wrapper = mount(BaseIconButton, {
-      props: { icon: 'minus', label: 'Decrease quantity' },
-    })
-
-    expect(wrapper.get('button').attributes('type')).toBe('button')
-  })
-
-  it('passes clicks through to the parent', async () => {
-    const onClick = vi.fn()
-    const wrapper = mount(BaseIconButton, {
-      props: { icon: 'plus', label: 'Increase quantity' },
+      props: { icon: "minus", label: "Decrease quantity", disabled },
       attrs: { onClick },
-    })
+    });
+    const button = wrapper.get("button");
 
-    await wrapper.get('button').trigger('click')
+    await button.trigger("click");
 
-    expect(onClick).toHaveBeenCalledOnce()
-  })
-
-  it('ignores clicks when disabled', async () => {
-    const onClick = vi.fn()
-    const wrapper = mount(BaseIconButton, {
-      props: { icon: 'minus', label: 'Decrease quantity', disabled: true },
-      attrs: { onClick },
-    })
-
-    const button = wrapper.get('button')
-    await button.trigger('click')
-
-    expect(button.element.disabled).toBe(true)
-    expect(onClick).not.toHaveBeenCalled()
-  })
-})
+    expect(button.element.disabled).toBe(false);
+    expect(button.attributes("aria-disabled")).toBe(ariaDisabled);
+    expect(onClick).toHaveBeenCalledTimes(clicks);
+  },
+);

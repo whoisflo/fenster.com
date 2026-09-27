@@ -91,7 +91,7 @@ function checkout() {
         <ShippingCalculator
           :quote="shippingQuote"
           :loading="isQuotingShipping"
-          :disabled="isEmpty"
+          :disabled="isEmpty && !isLoading"
           @calculate="cart.calculateShipping"
         />
       </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, useTemplateRef } from "vue";
 
 import BaseIconButton from "@/components/base/BaseIconButton.vue";
 import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
@@ -22,6 +22,13 @@ const ratingText = computed(() => {
   const { rate, count } = item.rating;
   return `${rate.toFixed(1)} (${pluralize(count, "review")})`;
 });
+
+const removeButtonRef =
+  useTemplateRef<InstanceType<typeof BaseIconButton>>("removeButton");
+
+defineExpose({
+  focusRemoveButton: () => removeButtonRef.value?.focus(),
+});
 </script>
 
 <template>
@@ -34,6 +41,7 @@ const ratingText = computed(() => {
         <div aria-hidden="true" class="size-20 rounded-xs bg-placeholder" />
         <span class="absolute -top-2 -right-2">
           <BaseIconButton
+            ref="removeButton"
             icon="close"
             variant="badge"
             :label="`Remove ${item.title}`"
