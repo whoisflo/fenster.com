@@ -4,6 +4,8 @@ A responsive shopping cart page for the Neuffer frontend test task, built after 
 
 Vue 3 (Composition API, `<script setup>`) · TypeScript (strict) · Tailwind CSS 4 · Pinia · Vitest
 
+**Live demo:** [whoisflo.github.io/fenster.com](https://whoisflo.github.io/fenster.com/). Every push to `main` is tested, built and deployed there by [a GitHub Actions workflow](.github/workflows/deploy.yml).
+
 ## Getting started
 
 Requires Node.js 20.19+ or 22.12+ (needed by Vite 8). With nvm, `nvm use` picks the version from `.nvmrc`.
