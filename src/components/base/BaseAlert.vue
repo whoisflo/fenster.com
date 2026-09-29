@@ -1,15 +1,15 @@
 <script setup lang="ts">
-type AlertTone = 'info' | 'error'
+type AlertTone = "info" | "error";
 
-const { tone = 'info' } = defineProps<{
-  tone?: AlertTone
-  title: string
-}>()
+const { tone = "info" } = defineProps<{
+  tone?: AlertTone;
+  title: string;
+}>();
 
 const toneClasses: Record<AlertTone, string> = {
-  info: 'bg-panel text-navy',
-  error: 'border border-red-200 bg-red-50 text-red-800',
-}
+  info: "bg-panel text-navy",
+  error: "border border-red-200 bg-red-50 text-red-800",
+};
 </script>
 
 <template>

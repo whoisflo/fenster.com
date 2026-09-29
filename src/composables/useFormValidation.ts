@@ -1,4 +1,4 @@
-import { computed, shallowRef, watch } from "vue";
+import { computed, shallowRef } from "vue";
 
 import type { FieldErrors } from "@/lib/validation";
 
@@ -10,20 +10,13 @@ export function useFormValidation<
 ) {
   type Field = keyof Values & string;
 
-  const errors = shallowRef<FieldErrors<Field>>({});
-  let submitted = false;
-
-  // Nobody sees errors before the first submit; from then on they follow every change.
-  watch(
-    () => ({ ...values }),
-    () => {
-      if (submitted) errors.value = validate(values);
-    },
+  const submitted = shallowRef(false);
+  const errors = computed<FieldErrors<Field>>(() =>
+    submitted.value ? validate(values) : {},
   );
 
   function validateAll(): boolean {
-    submitted = true;
-    errors.value = validate(values);
+    submitted.value = true;
     return Object.keys(errors.value).length === 0;
   }
 

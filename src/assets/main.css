@@ -1,9 +1,8 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-/* Design tokens sampled from the Figma mockup (docs/design/cart-mockup.png). */
 @theme {
-  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Josefin Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Josefin Sans", ui-sans-serif, system-ui, sans-serif;
 
   --color-navy: #1d3178;
   --color-green: #19d16f;
