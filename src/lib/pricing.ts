@@ -14,15 +14,3 @@ export function subtotal(lines: readonly PricedLine[]): number {
 export function tax(subtotalCents: number): number {
   return Math.round(subtotalCents * TAX_RATE);
 }
-
-export function grandTotal({
-  subtotalCents,
-  shippingCents,
-  taxCents,
-}: {
-  subtotalCents: number;
-  shippingCents: number;
-  taxCents: number;
-}): number {
-  return subtotalCents + shippingCents + taxCents;
-}

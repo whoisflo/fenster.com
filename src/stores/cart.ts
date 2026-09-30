@@ -6,7 +6,7 @@ import { INITIAL_PRODUCT_COUNT, MAX_QUANTITY, MIN_QUANTITY } from "@/config";
 import { newProducts } from "@/data/newProducts";
 import { toCents } from "@/lib/money";
 import { clampInteger } from "@/lib/number";
-import { grandTotal, subtotal, tax } from "@/lib/pricing";
+import { subtotal, tax } from "@/lib/pricing";
 import { quoteShipping } from "@/lib/shipping";
 import type {
   CartItem,
@@ -46,12 +46,8 @@ export const useCartStore = defineStore("cart", () => {
       : shippingQuote.value.costCents,
   );
   const taxCents = computed(() => tax(subtotalCents.value));
-  const totalCents = computed(() =>
-    grandTotal({
-      subtotalCents: subtotalCents.value,
-      shippingCents: shippingCents.value ?? 0,
-      taxCents: taxCents.value,
-    }),
+  const totalCents = computed(
+    () => subtotalCents.value + (shippingCents.value ?? 0) + taxCents.value,
   );
 
   async function loadProducts() {
@@ -60,11 +56,7 @@ export const useCartStore = defineStore("cart", () => {
 
     try {
       const products = await fetchProducts(INITIAL_PRODUCT_COUNT);
-      const existingKeys = new Set(items.value.map((item) => item.key));
-      const loaded = products
-        .map(toCartItem)
-        .filter((item) => !existingKeys.has(item.key));
-      items.value = [...loaded, ...items.value];
+      items.value = [...products.map(toCartItem), ...items.value];
       loadStatus.value = "success";
     } catch {
       loadStatus.value = "error";

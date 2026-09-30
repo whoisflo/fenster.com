@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { storeToRefs } from "pinia";
 import { computed, onMounted } from "vue";
 
 import CartActions from "@/components/cart/CartActions.vue";
@@ -12,22 +11,9 @@ import { useToastStore } from "@/stores/toast";
 
 const cart = useCartStore();
 const toast = useToastStore();
-const {
-  items,
-  loadStatus,
-  isAdding,
-  shippingQuote,
-  isQuotingShipping,
-  itemCount,
-  isEmpty,
-  subtotalCents,
-  shippingCents,
-  taxCents,
-  totalCents,
-} = storeToRefs(cart);
 
 const isLoading = computed(
-  () => loadStatus.value === "idle" || loadStatus.value === "loading",
+  () => cart.loadStatus === "idle" || cart.loadStatus === "loading",
 );
 
 onMounted(() => cart.loadProducts());
@@ -56,7 +42,7 @@ function checkout() {
     <h1 class="font-heading text-3xl font-bold text-navy">
       Shopping Cart
       <span v-if="!isLoading" class="font-sans text-lg font-normal">
-        ({{ pluralize(itemCount, "item") }})
+        ({{ pluralize(cart.itemCount, "item") }})
       </span>
     </h1>
 
@@ -65,15 +51,15 @@ function checkout() {
     >
       <div class="space-y-6">
         <CartTable
-          :items="items"
-          :status="loadStatus"
+          :items="cart.items"
+          :status="cart.loadStatus"
           @update-quantity="cart.setQuantity"
           @remove="cart.removeItem"
           @retry="cart.loadProducts"
         />
         <CartActions
-          :adding="isAdding"
-          :can-clear="!isEmpty"
+          :adding="cart.isAdding"
+          :can-clear="!cart.isEmpty"
           @add="addItem"
           @clear="clearCart"
         />
@@ -81,17 +67,17 @@ function checkout() {
 
       <div class="grid content-start gap-10 sm:grid-cols-2 xl:grid-cols-1">
         <CartTotals
-          :subtotal-cents="subtotalCents"
-          :shipping-cents="shippingCents"
-          :tax-cents="taxCents"
-          :total-cents="totalCents"
-          :checkout-disabled="isEmpty"
+          :subtotal-cents="cart.subtotalCents"
+          :shipping-cents="cart.shippingCents"
+          :tax-cents="cart.taxCents"
+          :total-cents="cart.totalCents"
+          :checkout-disabled="cart.isEmpty"
           @checkout="checkout"
         />
         <ShippingCalculator
-          :quote="shippingQuote"
-          :loading="isQuotingShipping"
-          :disabled="isEmpty && !isLoading"
+          :quote="cart.shippingQuote"
+          :loading="cart.isQuotingShipping"
+          :disabled="cart.isEmpty && !isLoading"
           @calculate="cart.calculateShipping"
         />
       </div>

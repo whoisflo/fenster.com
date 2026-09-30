@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useTemplateRef, watch } from "vue";
+import { computed, nextTick, useTemplateRef } from "vue";
 
 import BaseAlert from "@/components/base/BaseAlert.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
@@ -24,25 +24,15 @@ const isLoading = computed(() => status === "idle" || status === "loading");
 const isEmpty = computed(() => status === "success" && items.length === 0);
 
 const rowRefs = useTemplateRef<InstanceType<typeof CartItemRow>[]>("rows");
-let focusIndexAfterRemoval: number | null = null;
 
-function remove(key: string, index: number) {
-  focusIndexAfterRemoval = index;
+async function remove(key: string, index: number) {
   emit("remove", key);
+  await nextTick();
+  const next = items[Math.min(index, items.length - 1)];
+  rowRefs.value
+    ?.find((row) => row.$props.item.key === next?.key)
+    ?.focusRemoveButton();
 }
-
-watch(
-  () => items.length,
-  () => {
-    if (focusIndexAfterRemoval === null) return;
-    const next = items[Math.min(focusIndexAfterRemoval, items.length - 1)];
-    focusIndexAfterRemoval = null;
-    rowRefs.value
-      ?.find((row) => row.$props.item.key === next?.key)
-      ?.focusRemoveButton();
-  },
-  { flush: "post" },
-);
 </script>
 
 <template>

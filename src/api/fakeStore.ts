@@ -18,13 +18,7 @@ export interface CreatedProduct extends NewProduct {
 }
 
 export class ApiError extends Error {
-  readonly status: number | undefined;
-
-  constructor(message: string, status?: number) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
+  name = "ApiError";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,16 +59,13 @@ async function request(path: string, init: RequestInit = {}): Promise<unknown> {
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      `The API answered with status ${response.status}`,
-      response.status,
-    );
+    throw new ApiError(`The API answered with status ${response.status}`);
   }
 
   try {
     return await response.json();
   } catch {
-    throw new ApiError("The API answered with invalid JSON", response.status);
+    throw new ApiError("The API answered with invalid JSON");
   }
 }
 
