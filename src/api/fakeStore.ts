@@ -1,19 +1,11 @@
 import { API_BASE_URL, API_TIMEOUT_MS } from "@/config";
 
-export interface ApiProduct {
-  id: number;
-  title: string;
-  price: number;
-  category: string;
-  rating: { rate: number; count: number };
-}
-
 export interface NewProduct {
   title: string;
   price: number;
 }
 
-export interface CreatedProduct extends NewProduct {
+export interface ApiProduct extends NewProduct {
   id: number;
 }
 
@@ -26,19 +18,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isApiProduct(value: unknown): value is ApiProduct {
-  return (
-    isRecord(value) &&
-    typeof value.id === "number" &&
-    typeof value.title === "string" &&
-    typeof value.price === "number" &&
-    typeof value.category === "string" &&
-    isRecord(value.rating) &&
-    typeof value.rating.rate === "number" &&
-    typeof value.rating.count === "number"
-  );
-}
-
-function isCreatedProduct(value: unknown): value is CreatedProduct {
   return (
     isRecord(value) &&
     typeof value.id === "number" &&
@@ -77,15 +56,13 @@ export async function fetchProducts(limit: number): Promise<ApiProduct[]> {
   return data;
 }
 
-export async function createProduct(
-  product: NewProduct,
-): Promise<CreatedProduct> {
+export async function createProduct(product: NewProduct): Promise<ApiProduct> {
   const data = await request("/products", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(product),
   });
-  if (!isCreatedProduct(data)) {
+  if (!isApiProduct(data)) {
     throw new ApiError("The API answered with an unexpected product");
   }
   return data;

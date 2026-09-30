@@ -15,14 +15,12 @@ import type {
   ShippingQuote,
 } from "@/types/cart";
 
-function toCartItem(product: ApiProduct): CartItem {
+function toCartItem(product: ApiProduct, key: string): CartItem {
   return {
-    key: `product-${product.id}`,
+    key,
     productId: product.id,
     title: product.title.trim(),
     unitPriceCents: toCents(product.price),
-    category: product.category,
-    rating: { rate: product.rating.rate, count: product.rating.count },
     quantity: 1,
   };
 }
@@ -56,7 +54,10 @@ export const useCartStore = defineStore("cart", () => {
 
     try {
       const products = await fetchProducts(INITIAL_PRODUCT_COUNT);
-      items.value = [...products.map(toCartItem), ...items.value];
+      const loaded = products.map((product) =>
+        toCartItem(product, `product-${product.id}`),
+      );
+      items.value = [...loaded, ...items.value];
       loadStatus.value = "success";
     } catch {
       loadStatus.value = "error";
@@ -70,15 +71,7 @@ export const useCartStore = defineStore("cart", () => {
     try {
       const created = await createProduct(product);
       addedCount += 1;
-      const item: CartItem = {
-        key: `new-${addedCount}`,
-        productId: created.id,
-        title: created.title,
-        unitPriceCents: toCents(created.price),
-        category: null,
-        rating: null,
-        quantity: 1,
-      };
+      const item = toCartItem(created, `new-${addedCount}`);
       items.value.push(item);
       return item;
     } finally {

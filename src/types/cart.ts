@@ -5,8 +5,6 @@ export interface CartItem {
   productId: number;
   title: string;
   unitPriceCents: number;
-  category: string | null;
-  rating: { rate: number; count: number } | null;
   quantity: number;
 }
 

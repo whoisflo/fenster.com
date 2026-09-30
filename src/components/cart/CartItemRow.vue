@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from "vue";
+import { useTemplateRef } from "vue";
 
 import BaseIconButton from "@/components/base/BaseIconButton.vue";
 import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
@@ -7,7 +7,6 @@ import { cartGrid } from "@/components/cart/cartGrid";
 import { MAX_QUANTITY, MIN_QUANTITY } from "@/config";
 import { formatMoney } from "@/lib/money";
 import { lineTotal } from "@/lib/pricing";
-import { pluralize } from "@/lib/text";
 import type { CartItem } from "@/types/cart";
 
 const { item } = defineProps<{ item: CartItem }>();
@@ -16,12 +15,6 @@ const emit = defineEmits<{
   updateQuantity: [quantity: number];
   remove: [];
 }>();
-
-const ratingText = computed(() => {
-  if (!item.rating) return null;
-  const { rate, count } = item.rating;
-  return `${rate.toFixed(1)} (${pluralize(count, "review")})`;
-});
 
 const removeButtonRef =
   useTemplateRef<InstanceType<typeof BaseIconButton>>("removeButton");
@@ -51,12 +44,6 @@ defineExpose({
       </div>
       <div class="min-w-0 pt-1">
         <p class="line-clamp-2 text-sm text-neutral-900">{{ item.title }}</p>
-        <p v-if="item.category" class="mt-1 text-xs text-muted">
-          Category: {{ item.category }}
-        </p>
-        <p v-if="ratingText" class="text-xs text-muted">
-          Rating: {{ ratingText }}
-        </p>
       </div>
     </div>
 
