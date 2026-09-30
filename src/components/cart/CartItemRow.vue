@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTemplateRef } from "vue";
+import { ref, useTemplateRef } from "vue";
 
 import BaseIconButton from "@/components/base/BaseIconButton.vue";
 import BaseQuantityStepper from "@/components/base/BaseQuantityStepper.vue";
@@ -16,6 +16,8 @@ const emit = defineEmits<{
   remove: [];
 }>();
 
+const imageFailed = ref(false);
+
 const removeButtonRef =
   useTemplateRef<InstanceType<typeof BaseIconButton>>("removeButton");
 
@@ -31,7 +33,18 @@ defineExpose({
   >
     <div class="flex items-start gap-4">
       <div class="relative shrink-0">
-        <div aria-hidden="true" class="size-20 rounded-xs bg-placeholder" />
+        <img
+          v-if="item.image && !imageFailed"
+          :src="item.image"
+          alt=""
+          class="size-20 rounded-xs object-contain"
+          @error="imageFailed = true"
+        />
+        <div
+          v-else
+          aria-hidden="true"
+          class="size-20 rounded-xs bg-placeholder"
+        />
         <span class="absolute -top-2 -right-2">
           <BaseIconButton
             ref="removeButton"

@@ -21,6 +21,7 @@ function toCartItem(product: ApiProduct, key: string): CartItem {
     productId: product.id,
     title: product.title.trim(),
     unitPriceCents: toCents(product.price),
+    image: product.image ?? null,
     quantity: 1,
   };
 }

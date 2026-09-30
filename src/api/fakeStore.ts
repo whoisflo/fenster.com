@@ -7,6 +7,7 @@ export interface NewProduct {
 
 export interface ApiProduct extends NewProduct {
   id: number;
+  image?: string;
 }
 
 export class ApiError extends Error {
@@ -22,7 +23,8 @@ function isApiProduct(value: unknown): value is ApiProduct {
     isRecord(value) &&
     typeof value.id === "number" &&
     typeof value.title === "string" &&
-    typeof value.price === "number"
+    typeof value.price === "number" &&
+    (value.image === undefined || typeof value.image === "string")
   );
 }
 

@@ -103,6 +103,7 @@ describe("addItem", () => {
       productId: 21,
       title: "Canvas Tote Bag",
       unitPriceCents: 2900,
+      image: null,
       quantity: 1,
     });
     expect(cart.isAdding).toBe(false);

@@ -6,6 +6,7 @@ const loadedItems: CartItem[] = [
     productId: 1,
     title: "Fjallraven - Foldsack No. 1 Backpack, Fits 15 Laptops",
     unitPriceCents: 10995,
+    image: "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_t.png",
     quantity: 1,
   },
   {
@@ -13,6 +14,8 @@ const loadedItems: CartItem[] = [
     productId: 2,
     title: "Mens Casual Premium Slim Fit T-Shirts",
     unitPriceCents: 2230,
+    image:
+      "https://fakestoreapi.com/img/71-3HjGNDUL._AC_SY879._SX._UX._SY._UY_t.png",
     quantity: 1,
   },
   {
@@ -20,6 +23,7 @@ const loadedItems: CartItem[] = [
     productId: 3,
     title: "Mens Cotton Jacket",
     unitPriceCents: 5599,
+    image: "https://fakestoreapi.com/img/71li-ujtlUL._AC_UX679_t.png",
     quantity: 1,
   },
   {
@@ -27,6 +31,7 @@ const loadedItems: CartItem[] = [
     productId: 4,
     title: "Mens Casual Slim Fit",
     unitPriceCents: 1599,
+    image: "https://fakestoreapi.com/img/71YXzeOuslL._AC_UY879_t.png",
     quantity: 1,
   },
   {
@@ -35,6 +40,7 @@ const loadedItems: CartItem[] = [
     title:
       "John Hardy Women's Legends Naga Gold & Silver Dragon Station Chain Bracelet",
     unitPriceCents: 69500,
+    image: "https://fakestoreapi.com/img/71pWzhdJNwL._AC_UL640_QL65_ML3_t.png",
     quantity: 1,
   },
 ];
@@ -44,6 +50,7 @@ const addedItem: CartItem = {
   productId: 21,
   title: "Canvas Tote Bag",
   unitPriceCents: 2900,
+  image: null,
   quantity: 1,
 };
 export function sampleCartItems(): CartItem[] {
